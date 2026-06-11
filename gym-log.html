@@ -1,0 +1,504 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Gym log</title>
+<style>
+  /* Scoped under #glog so the host site's theme (e.g. Bear) can't override it,
+     and so this widget's colours don't leak onto the rest of the page. */
+  #glog{
+    /* Matches ponchosec.dev: white, navy ink (#232333), red accent (#ff0000), Roboto Mono. */
+    --ink:#ffffff;
+    --surface:#ffffff;
+    --surface-2:#f2f2f2;
+    --line:#e2e2e8;
+    --text:#232333;
+    --muted:#76767f;
+    --accent:#ff0000;
+    --accent-dim:#fff0f0;
+    --accent-edge:#ffd0d0;
+    --accent-press:#cc0000;
+    --on-accent:#ffffff;
+    --danger:#e60000;
+    --receipt-bg:#f2f2f2;
+    --receipt-text:#232333;
+    --radius:8px;
+    --mono:'Roboto Mono',ui-monospace,Menlo,Consolas,monospace;
+
+    display:block!important;max-width:560px;margin:0 auto;padding:20px;border-radius:12px;
+    border:1px solid var(--text);
+    background:var(--ink)!important;color:var(--text)!important;font-family:var(--mono)!important;
+    font-size:16px!important;line-height:1.5!important;text-align:left;-webkit-text-size-adjust:100%;}
+  #glog *,#glog *::before,#glog *::after{box-sizing:border-box;}
+  #glog p,#glog h1,#glog div,#glog label,#glog span{margin:0;}
+
+  #glog .masthead{display:flex!important;flex-wrap:nowrap!important;align-items:center;
+    justify-content:space-between;border-bottom:1px solid var(--line);padding-bottom:12px;margin-bottom:18px;}
+  #glog .masthead h1{font-family:var(--mono)!important;font-size:14px!important;font-weight:400!important;
+    letter-spacing:.06em;text-transform:uppercase;margin:0!important;line-height:1.4!important;
+    background:var(--accent)!important;color:var(--on-accent)!important;padding:4px 9px!important;
+    display:inline-block!important;width:auto!important;flex:0 1 auto!important;border:0!important;}
+  #glog .controls{display:flex!important;gap:8px;align-items:center;flex:0 0 auto!important;}
+
+  #glog .pill{font-family:var(--mono)!important;font-size:13px;line-height:1;background:transparent;
+    border:1px solid var(--line);color:var(--accent);height:32px;border-radius:7px;cursor:pointer;
+    display:inline-flex;align-items:center;justify-content:center;padding:0 10px;margin:0;
+    text-transform:none;-webkit-appearance:none;appearance:none;}
+  #glog .pill:active{background:var(--surface-2);}
+  #glog .pill.mini{height:24px;font-size:11px;padding:0 8px;border-radius:6px;}
+
+  #glog .meta{display:flex;gap:10px;margin-bottom:20px;}
+  #glog .meta label{flex:1;display:flex;flex-direction:column;gap:5px;
+    font-size:11px;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);}
+
+  #glog input,#glog textarea,#glog button{font-family:var(--mono)!important;font-size:16px;
+    color:var(--text);margin:0;-webkit-appearance:none;appearance:none;}
+  #glog .field{background:var(--surface)!important;border:1px solid var(--line)!important;border-radius:7px;
+    padding:11px 12px;width:100%!important;outline:none;line-height:1.4;
+    transition:border-color .12s,background .12s;}
+  #glog .field:focus-visible{border-color:var(--accent)!important;background:var(--surface-2)!important;}
+  #glog ::placeholder{color:var(--muted);opacity:.7;}
+
+  #glog .block{margin-bottom:22px;}
+  #glog .block-head{font-size:11px;letter-spacing:.1em;text-transform:uppercase;color:var(--muted)!important;
+    margin:0 0 10px;display:flex;align-items:center;gap:8px;font-weight:400;}
+  #glog .block-head::after{content:"";flex:1;height:1px;background:var(--line);}
+  #glog .block-head.has-toggle::after{display:none;}
+  #glog .rule{flex:1;height:1px;background:var(--line);}
+
+  #glog .ex{background:var(--surface)!important;border:1px solid var(--line)!important;border-radius:var(--radius);
+    padding:12px;margin-bottom:12px;}
+  #glog .ex-top{display:flex;gap:8px;align-items:center;margin-bottom:10px;}
+  #glog .ex-name{flex:1;font-size:16px;font-weight:600;background:transparent!important;border:0;
+    border-bottom:1px solid var(--line)!important;padding:6px 2px;color:var(--text)!important;
+    outline:none;border-radius:0;width:auto;}
+  #glog .ex-name:focus-visible{border-bottom-color:var(--accent)!important;}
+
+  #glog .set{display:flex;align-items:center;gap:8px;margin-bottom:8px;}
+  #glog .set .field{text-align:center;padding:9px 6px;}
+  #glog .set .x{color:var(--muted);flex:none;}
+  #glog .set input{min-width:0;}
+
+  #glog .marker{flex:none;width:30px;height:34px;border-radius:7px;border:1px solid var(--line);
+    background:transparent;color:var(--text);font-size:12px;cursor:pointer;font-family:var(--mono)!important;
+    display:inline-flex;align-items:center;justify-content:center;padding:0;margin:0;}
+  #glog .marker:active{background:var(--surface-2);}
+  #glog .marker.warm{color:var(--muted);border-color:var(--muted);}
+  #glog .marker.drop{color:var(--danger);border-color:var(--danger);}
+
+  #glog .icon-btn{flex:none;width:34px;height:34px;border-radius:7px;border:1px solid transparent;
+    background:transparent;color:var(--danger);font-size:18px;line-height:1;cursor:pointer;
+    display:inline-flex;align-items:center;justify-content:center;padding:0;margin:0;}
+  #glog .icon-btn:active{background:var(--surface-2);}
+
+  #glog .row-actions{display:flex;gap:8px;margin-top:4px;}
+  #glog .ghost{background:transparent;border:1px dashed var(--line);color:var(--muted);
+    border-radius:7px;padding:9px 12px;font-size:13px;cursor:pointer;margin:0;}
+  #glog .ghost:active{border-color:var(--accent);color:var(--accent);}
+
+  #glog .add-ex{width:100%!important;background:var(--accent-dim)!important;
+    border:1px solid var(--accent-edge)!important;color:var(--accent)!important;
+    border-radius:var(--radius);padding:13px;font-size:14px;font-weight:600;cursor:pointer;margin:0;}
+  #glog .add-ex:active{background:var(--accent-edge)!important;}
+
+  #glog #out{width:100%!important;min-height:150px!important;height:150px;background:var(--receipt-bg)!important;
+    border:1px solid var(--line)!important;border-radius:var(--radius);padding:16px;font-family:var(--mono)!important;
+    font-size:13px;line-height:1.7!important;color:var(--receipt-text)!important;resize:vertical;
+    outline:none;white-space:pre;}
+  #glog #out:focus-visible{border-color:var(--accent)!important;}
+
+  #glog .bar{display:flex;gap:10px;padding-top:14px;margin-top:14px;}
+  #glog .btn{flex:1;border-radius:var(--radius);padding:15px;font-size:15px;font-weight:600;
+    cursor:pointer;border:1px solid transparent;margin:0;}
+  #glog .btn-primary{background:var(--accent)!important;color:var(--on-accent)!important;}
+  #glog .btn-primary:active{background:var(--accent-press)!important;}
+  #glog .btn-secondary{background:transparent!important;border:1px solid var(--line)!important;
+    color:var(--muted)!important;flex:0 0 38%;}
+  #glog .btn-secondary:active{border-color:var(--danger)!important;color:var(--danger)!important;}
+
+  #glog .hint{color:var(--muted)!important;font-size:12px;margin:8px 0 0;}
+  #glog .hint b{color:var(--accent)!important;font-weight:700;}
+
+  @media (prefers-reduced-motion:reduce){#glog *{transition:none!important;}}
+</style>
+</head>
+<body>
+
+<div id="glog">
+  <div class="masthead">
+    <h1>Gym&nbsp;Log</h1>
+    <div class="controls">
+      <button class="pill" id="unit" type="button" aria-label="Toggle weight unit">kg</button>
+    </div>
+  </div>
+
+  <div class="meta">
+    <label>Date
+      <input class="field" id="date" type="text" autocomplete="off">
+    </label>
+    <label>Bodyweight
+      <input class="field" id="bw" type="text" inputmode="decimal" autocomplete="off">
+    </label>
+  </div>
+
+  <div class="block">
+    <p class="block-head">Lifts</p>
+    <div id="exercises"></div>
+    <button class="add-ex" id="addEx">+ Add exercise</button>
+    <p class="hint">Tap a set's number to flag it: <b>W</b> warm-up &middot; <b>D</b> drop set.</p>
+  </div>
+
+  <div class="block">
+    <div class="block-head has-toggle">
+      <span>Cardio</span><span class="rule"></span>
+      <button class="pill mini" id="cunit" type="button" aria-label="Toggle distance unit">km</button>
+    </div>
+    <div id="cardio"></div>
+    <button class="ghost" id="addCardio" style="width:100%">+ Add cardio</button>
+  </div>
+
+  <div class="block">
+    <p class="block-head">Martial arts</p>
+    <div id="ma"></div>
+    <button class="ghost" id="addMA" style="width:100%">+ Add session</button>
+  </div>
+
+  <div class="block">
+    <p class="block-head">Copy out</p>
+    <textarea id="out" readonly spellcheck="false" aria-label="Workout summary"></textarea>
+    <p class="hint" id="hint">Updates as you log. Paste straight into your notes.</p>
+  </div>
+
+  <div class="bar">
+    <button class="btn btn-primary" id="copy">Copy workout</button>
+    <button class="btn btn-secondary" id="reset">New session</button>
+  </div>
+
+</div>
+
+<script>
+(function(){
+  "use strict";
+  var KEY = "ponchosec.gymlog.v1";
+  var uid = 0;
+  function nid(){ return "i" + (++uid); }
+
+  function today(){
+    try { return new Date().toLocaleDateString("en-GB",{day:"2-digit",month:"short",year:"numeric"}); }
+    catch(e){ return new Date().toDateString(); }
+  }
+
+  function blankSet(prefillWeight){ return { id:nid(), w: prefillWeight||"", r:"", t:"work" }; }
+  function blankEx(){ return { id:nid(), name:"", sets:[ blankSet("") ] }; }
+  function blankCardio(){ return { id:nid(), name:"", dist:"", time:"" }; }
+  function blankMA(){ return { id:nid(), type:"", rounds:"", length:"", notes:"" }; }
+
+  var state = { date: today(), bw:"", unit:"kg", cardioUnit:"km", exercises:[ blankEx() ], cardio:[], ma:[] };
+
+  // ---- persistence (guarded; works when hosted, no-ops in sandboxed preview) ----
+  function save(){ try { window.localStorage.setItem(KEY, JSON.stringify(state)); } catch(e){} }
+  function load(){
+    try {
+      var raw = window.localStorage.getItem(KEY);
+      if(!raw) return false;
+      var d = JSON.parse(raw);
+      if(d && d.exercises){
+        if(!d.unit) d.unit = "kg";
+        if(!d.cardioUnit) d.cardioUnit = "km";
+        if(!d.ma) d.ma = [];
+        d.exercises.forEach(function(e){ e.sets.forEach(function(s){ if(!s.t) s.t="work"; }); });
+        state = d; return true;
+      }
+    } catch(e){}
+    return false;
+  }
+
+  var elEx = document.getElementById("exercises");
+  var elCardio = document.getElementById("cardio");
+  var elMA = document.getElementById("ma");
+  var elDate = document.getElementById("date");
+  var elBw = document.getElementById("bw");
+  var elOut = document.getElementById("out");
+  var elHint = document.getElementById("hint");
+  var elUnit = document.getElementById("unit");
+  var elCunit = document.getElementById("cunit");
+
+  // ---- builders ----
+  function inp(mode, ph){
+    var i=document.createElement("input");
+    i.type="text"; i.setAttribute("inputmode",mode); i.placeholder=ph; i.autocomplete="off";
+    i.classList.add("field");
+    return i;
+  }
+  function iconBtn(label){
+    var b=document.createElement("button"); b.className="icon-btn"; b.type="button"; b.textContent=label; return b;
+  }
+  function ghost(label){
+    var b=document.createElement("button"); b.className="ghost"; b.type="button"; b.textContent=label; return b;
+  }
+
+  function setRow(ex, set){
+    var row = document.createElement("div");
+    row.className = "set";
+
+    var marker = document.createElement("button");
+    marker.type="button"; marker.className="marker";
+    marker.addEventListener("click", function(){
+      set.t = set.t==="work" ? "warm" : (set.t==="warm" ? "drop" : "work");
+      renderEx(); touch();
+    });
+
+    var w = inp("decimal", state.unit); w.value = set.w;
+    var x = document.createElement("span"); x.className="x"; x.textContent="\u00d7";
+    var r = inp("numeric","reps"); r.value = set.r;
+    var kill = iconBtn("\u2212");
+
+    w.addEventListener("input", function(){ set.w = w.value; touch(); });
+    r.addEventListener("input", function(){ set.r = r.value; touch(); });
+    kill.addEventListener("click", function(){
+      var i = ex.sets.indexOf(set);
+      if(i>-1) ex.sets.splice(i,1);
+      if(ex.sets.length===0) ex.sets.push(blankSet(""));
+      renderEx(); touch();
+    });
+
+    row.appendChild(marker); row.appendChild(w); row.appendChild(x); row.appendChild(r); row.appendChild(kill);
+    row._set = set; row._marker = marker;
+    return row;
+  }
+
+  function numberSets(setList){
+    var rows = setList.querySelectorAll(".set");
+    var wc = 0;
+    for(var i=0;i<rows.length;i++){
+      var s = rows[i]._set, m = rows[i]._marker; if(!s||!m) continue;
+      m.className = "marker " + s.t;
+      if(s.t==="warm") m.textContent="W";
+      else if(s.t==="drop") m.textContent="D";
+      else { wc++; m.textContent=String(wc); }
+    }
+  }
+
+  function exCard(ex){
+    var card = document.createElement("div"); card.className = "ex";
+    var top = document.createElement("div"); top.className="ex-top";
+    var name = document.createElement("input");
+    name.className="ex-name"; name.placeholder="Exercise"; name.value=ex.name; name.autocomplete="off";
+    name.addEventListener("input", function(){ ex.name = name.value; touch(); });
+    var killEx = iconBtn("\u2715");
+    killEx.addEventListener("click", function(){
+      var i = state.exercises.indexOf(ex);
+      if(i>-1) state.exercises.splice(i,1);
+      if(state.exercises.length===0) state.exercises.push(blankEx());
+      renderEx(); touch();
+    });
+    top.appendChild(name); top.appendChild(killEx); card.appendChild(top);
+
+    var setList = document.createElement("div");
+    ex.sets.forEach(function(s){ setList.appendChild(setRow(ex, s)); });
+    card.appendChild(setList);
+
+    var actions = document.createElement("div"); actions.className="row-actions";
+    var addSet = ghost("+ Set");
+    addSet.addEventListener("click", function(){
+      var last = ex.sets[ex.sets.length-1];
+      var s = blankSet(last ? last.w : "");
+      ex.sets.push(s);
+      setList.appendChild(setRow(ex, s));
+      numberSets(setList); touch();
+    });
+    actions.appendChild(addSet); card.appendChild(actions);
+
+    numberSets(setList);
+    return card;
+  }
+
+  function cardioRow(c){
+    var card = document.createElement("div"); card.className="ex";
+    var top = document.createElement("div"); top.className="ex-top";
+    var name = document.createElement("input");
+    name.className="ex-name"; name.placeholder="Run / row / bike"; name.value=c.name; name.autocomplete="off";
+    name.addEventListener("input", function(){ c.name=name.value; touch(); });
+    var kill = iconBtn("\u2715");
+    kill.addEventListener("click", function(){
+      var i=state.cardio.indexOf(c); if(i>-1) state.cardio.splice(i,1);
+      renderCardio(); touch();
+    });
+    top.appendChild(name); top.appendChild(kill); card.appendChild(top);
+
+    var row = document.createElement("div"); row.className="set";
+    var dist = inp("decimal", state.cardioUnit); dist.value=c.dist;
+    var sep = document.createElement("span"); sep.className="x"; sep.textContent="\u00b7";
+    var time = inp("numeric","mm:ss"); time.value=c.time;
+    dist.addEventListener("input", function(){ c.dist=dist.value; touch(); });
+    time.addEventListener("input", function(){ c.time=time.value; touch(); });
+    var spacer = document.createElement("span"); spacer.style.width="34px"; spacer.style.flex="none";
+    row.appendChild(dist); row.appendChild(sep); row.appendChild(time); row.appendChild(spacer);
+    card.appendChild(row);
+    return card;
+  }
+
+  function maRow(m){
+    var card = document.createElement("div"); card.className="ex";
+    var top = document.createElement("div"); top.className="ex-top";
+    var name = document.createElement("input");
+    name.className="ex-name"; name.placeholder="BJJ / Muay Thai / sparring"; name.value=m.type; name.autocomplete="off";
+    name.addEventListener("input", function(){ m.type=name.value; touch(); });
+    var kill = iconBtn("\u2715");
+    kill.addEventListener("click", function(){
+      var i=state.ma.indexOf(m); if(i>-1) state.ma.splice(i,1);
+      renderMA(); touch();
+    });
+    top.appendChild(name); top.appendChild(kill); card.appendChild(top);
+
+    var row = document.createElement("div"); row.className="set";
+    var rounds = inp("numeric","rounds"); rounds.value=m.rounds;
+    var x = document.createElement("span"); x.className="x"; x.textContent="\u00d7";
+    var length = inp("numeric","min"); length.value=m.length;
+    rounds.addEventListener("input", function(){ m.rounds=rounds.value; touch(); });
+    length.addEventListener("input", function(){ m.length=length.value; touch(); });
+    var spacer = document.createElement("span"); spacer.style.width="34px"; spacer.style.flex="none";
+    row.appendChild(rounds); row.appendChild(x); row.appendChild(length); row.appendChild(spacer);
+    card.appendChild(row);
+
+    var notes = document.createElement("input");
+    notes.className="field"; notes.placeholder="Techniques, rolls, what to work on\u2026";
+    notes.value=m.notes; notes.autocomplete="off"; notes.style.marginTop="8px";
+    notes.addEventListener("input", function(){ m.notes=notes.value; touch(); });
+    card.appendChild(notes);
+    return card;
+  }
+
+  function renderEx(){
+    elEx.innerHTML="";
+    state.exercises.forEach(function(ex){ elEx.appendChild(exCard(ex)); });
+  }
+  function renderCardio(){
+    elCardio.innerHTML="";
+    state.cardio.forEach(function(c){ elCardio.appendChild(cardioRow(c)); });
+  }
+  function renderMA(){
+    elMA.innerHTML="";
+    state.ma.forEach(function(m){ elMA.appendChild(maRow(m)); });
+  }
+
+  // ---- output ----
+  function buildText(){
+    var U = state.unit || "kg";
+    var L=[];
+    L.push("Workout \u2014 " + (state.date||today()));
+    if(state.bw && String(state.bw).trim()) L.push("Bodyweight " + state.bw.trim() + " " + U);
+    var any=false;
+    state.exercises.forEach(function(ex){
+      var sets = ex.sets.filter(function(s){ return (s.w&&s.w.trim()) || (s.r&&s.r.trim()); });
+      if(!ex.name.trim() && sets.length===0) return;
+      any=true; L.push(""); L.push(ex.name.trim() || "Exercise");
+      sets.forEach(function(s){
+        var w=(s.w||"").trim(), r=(s.r||"").trim();
+        var line = "  " + (w?(w+" "+U):"?") + " \u00d7 " + (r?r:"?");
+        if(s.t==="warm") line += "  (warm-up)";
+        else if(s.t==="drop") line += "  (drop set)";
+        L.push(line);
+      });
+    });
+    var cardio = state.cardio.filter(function(c){ return c.name.trim()||c.dist.trim()||c.time.trim(); });
+    if(cardio.length){
+      L.push(""); L.push("Cardio");
+      cardio.forEach(function(c){
+        var parts=[];
+        if(c.dist.trim()) parts.push(c.dist.trim()+" "+(state.cardioUnit||"km"));
+        if(c.time.trim()) parts.push(c.time.trim());
+        L.push("  " + (c.name.trim()||"Cardio") + (parts.length?(" \u2014 "+parts.join(", ")):""));
+      });
+      any=true;
+    }
+    var ma = state.ma.filter(function(m){
+      return m.type.trim()||m.rounds.trim()||m.length.trim()||m.notes.trim();
+    });
+    if(ma.length){
+      L.push(""); L.push("Martial arts");
+      ma.forEach(function(m){
+        L.push("  " + (m.type.trim()||"Session"));
+        var rl="";
+        if(m.rounds.trim() && m.length.trim()) rl = m.rounds.trim()+" \u00d7 "+m.length.trim()+" min rounds";
+        else if(m.rounds.trim()) rl = m.rounds.trim()+" rounds";
+        else if(m.length.trim()) rl = m.length.trim()+" min";
+        if(rl) L.push("    "+rl);
+        if(m.notes.trim()) L.push("    "+m.notes.trim());
+      });
+      any=true;
+    }
+    if(!any) L.push(""), L.push("(nothing logged yet)");
+    return L.join("\n");
+  }
+
+  function refresh(){ elOut.value = buildText(); }
+  function touch(){ refresh(); save(); }
+
+  // ---- copy ----
+  function flash(msg){
+    var prev = elHint.textContent;
+    elHint.textContent = msg; elHint.style.color = "var(--accent)";
+    setTimeout(function(){ elHint.textContent = prev; elHint.style.color=""; }, 1600);
+  }
+  function copyOut(){
+    var text = buildText();
+    if(navigator.clipboard && navigator.clipboard.writeText){
+      navigator.clipboard.writeText(text).then(function(){ flash("Copied to clipboard"); },
+        function(){ legacyCopy(text); });
+    } else { legacyCopy(text); }
+  }
+  function legacyCopy(text){
+    elOut.removeAttribute("readonly"); elOut.focus(); elOut.select();
+    try { document.execCommand("copy"); flash("Copied to clipboard"); }
+    catch(e){ flash("Select the text above to copy"); }
+    elOut.setAttribute("readonly",""); window.getSelection().removeAllRanges();
+  }
+
+  // ---- units ----
+  function applyUnitLabel(){
+    elUnit.textContent = state.unit;
+    elCunit.textContent = state.cardioUnit;
+    elBw.placeholder = state.unit;
+  }
+
+  // ---- wire up ----
+  load();
+  elDate.value = state.date || today(); state.date = elDate.value;
+  elBw.value = state.bw || "";
+  applyUnitLabel();
+  elDate.addEventListener("input", function(){ state.date=elDate.value; touch(); });
+  elBw.addEventListener("input", function(){ state.bw=elBw.value; touch(); });
+  elUnit.addEventListener("click", function(){
+    state.unit = state.unit==="kg" ? "lb" : "kg";
+    applyUnitLabel(); renderEx(); touch();
+  });
+  elCunit.addEventListener("click", function(){
+    state.cardioUnit = state.cardioUnit==="km" ? "mi" : "km";
+    applyUnitLabel(); renderCardio(); touch();
+  });
+
+  document.getElementById("addEx").addEventListener("click", function(){
+    var ex=blankEx(); state.exercises.push(ex); elEx.appendChild(exCard(ex)); touch();
+  });
+  document.getElementById("addCardio").addEventListener("click", function(){
+    var c=blankCardio(); state.cardio.push(c); elCardio.appendChild(cardioRow(c)); touch();
+  });
+  document.getElementById("addMA").addEventListener("click", function(){
+    var m=blankMA(); state.ma.push(m); elMA.appendChild(maRow(m)); touch();
+  });
+  document.getElementById("copy").addEventListener("click", copyOut);
+  document.getElementById("reset").addEventListener("click", function(){
+    if(!confirm("Clear this session and start fresh?")) return;
+    var keepUnit = state.unit, keepCardio = state.cardioUnit;
+    state = { date: today(), bw:"", unit:keepUnit, cardioUnit:keepCardio, exercises:[ blankEx() ], cardio:[], ma:[] };
+    elDate.value=state.date; elBw.value=""; applyUnitLabel();
+    renderEx(); renderCardio(); renderMA(); touch();
+  });
+
+  renderEx(); renderCardio(); renderMA(); refresh();
+})();
+</script>
+</body>
+</html>
